@@ -2,13 +2,21 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <map>
+#include <queue>
+#include <stack>
 
 bool valid_tokens(std::vector<std::string> tokens);
 bool valid_function_usage(std::vector<std::string> tokens, int& i);
+void process_tokens(std::vector<std::string> tokens);
+std::vector<std::string> convert_rpn(std::vector<std::string> tokens);
 
 const std::vector<std::string> operators = { "+", "-", "*", "/" };
 const std::vector<std::string> functions = { "pow", "abs", "max", "min" };
 const std::vector<std::string> allowed = { "(", ")", "," };
+const std::map<std::string, int> precedence =
+    {{"+", 1}, {"-", 1}, {"*", 2}, {"/", 2}, {"pow", 3}, {"abs", 3}, {"max", 3}, {"min", 3}, {")", 0}, {"(", 0}};
+
 
 int main() {
     while (true) {
@@ -57,6 +65,8 @@ int main() {
             std::cout << token << ' ';
         }
         std::cout << std::endl;
+
+        process_tokens(tokens);
     }
 }
 
@@ -122,4 +132,56 @@ bool valid_function_usage(std::vector<std::string> tokens, int& i) {
 
     return false;
 }
+
+void process_tokens(std::vector<std::string> tokens) {
+    std::vector<std::string> rpn_tokens = convert_rpn(tokens);
+    //For the purpose of debug
+    for (auto& token : rpn_tokens) {
+        std::cout << token << ' ';
+    }
+}
+
+std::vector<std::string> convert_rpn(std::vector<std::string> tokens) {
+    std::stack<std::string> operator_stack;
+    std::queue<std::string> output_queue;
+
+    for (auto& token : tokens) {
+        if (std::ranges::all_of(token.begin(), token.end(), ::isdigit)) {
+            output_queue.push(token);
+        }
+        else if (token == ",") continue;
+        else if (token == "(") operator_stack.push(token);
+        else if (token == ")") {
+            while (!operator_stack.empty() && operator_stack.top() != "(") {
+                output_queue.push(operator_stack.top());
+                operator_stack.pop();
+            }
+            operator_stack.pop();
+            if (!operator_stack.empty() && std::find(functions.begin(), functions.end(), operator_stack.top()) != functions.end()) {
+                output_queue.push(operator_stack.top());
+                operator_stack.pop();
+            }
+        }
+        else if (precedence.contains(token)) {
+            while (!operator_stack.empty() && precedence.contains(operator_stack.top()) && precedence.at(operator_stack.top()) >= precedence.at(token)) {
+                output_queue.push(operator_stack.top());
+                operator_stack.pop();
+            }
+            operator_stack.push(token);
+        }
+    }
+    while (!operator_stack.empty()) {
+        output_queue.push(operator_stack.top());
+        operator_stack.pop();
+    }
+
+    std::vector<std::string> output;
+    while (!output_queue.empty()) {
+        output.push_back(output_queue.front());
+        output_queue.pop();
+    }
+
+    return output;
+}
+
 
