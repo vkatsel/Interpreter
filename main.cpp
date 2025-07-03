@@ -3,17 +3,17 @@
 #include <vector>
 #include <algorithm>
 #include <map>
-#include <math.h>
+#include <cmath>
 #include <queue>
 #include <stack>
 
-bool valid_tokens(std::vector<std::string> tokens);
-bool valid_function_usage(std::vector<std::string> tokens, int& i);
+bool valid_tokens(const std::vector<std::string> &tokens);
+bool valid_function_usage(const std::vector<std::string> &tokens, int& i);
 float apply_operator(float a, const std::string &operation, float b = 0);
-std::vector<std::string> convert_rpn(std::vector<std::string> tokens);
+std::vector<std::string> convert_rpn(const std::vector<std::string> &tokens);
 void parse_tokens(std::string& input, std::vector<std::string>& tokens, std::vector<char>& buffer);
-void process_tokens(std::vector<std::string> tokens);
-void calculate_pn(std::vector<std::string> tokens);
+void process_tokens(const std::vector<std::string> &tokens);
+void calculate_pn(const std::vector<std::string> &tokens);
 
 const std::vector<std::string> operators = { "+", "-", "*", "/" };
 const std::vector<std::string> functions = { "pow", "abs", "max", "min" };
@@ -26,7 +26,7 @@ int main() {
     while (true) {
         std::string input;
         std::getline(std::cin, input);
-        input.erase(std::remove_if(input.begin(), input.end(), isspace), input.end());
+        std::erase_if(input, isspace);
 
         std::vector<std::string> tokens;
         std::vector<char> buffer;
@@ -36,7 +36,7 @@ int main() {
             std::cout << "Your input was incorrect. Please, try again" << std::endl;
             input.clear(); tokens.clear(); buffer.clear();
             std::getline(std::cin, input);
-            input.erase(std::remove_if(input.begin(), input.end(), isspace), input.end());
+            input.erase(std::ranges::remove_if(input, isspace).begin(), input.end());
             parse_tokens(input, tokens, buffer);
         }
 
@@ -84,14 +84,14 @@ void parse_tokens(std::string& input, std::vector<std::string>& tokens, std::vec
     }
 }
 
-bool valid_tokens(std::vector<std::string> tokens) {
+bool valid_tokens(const std::vector<std::string> &tokens) {
     if (tokens.empty()) return false;
 
     int last_operand_idx = 0;
 
      for (int i = 0; i < tokens.size(); i++) {
-         if (is_number(tokens[i])) {
-             if (last_operand_idx == i - 1) return false;
+         if (is_number(tokens[i]) || tokens[i] == ")") {
+             if (last_operand_idx == i - 1 && tokens[i-1] != "(" && tokens[i] != ")") return false;
              last_operand_idx = i;
          } else if (std::find(operators.begin(), operators.end(), tokens[i]) != operators.end()) {
              if (last_operand_idx != i - 1 || i == tokens.size() - 1 || i == 0) return false;
@@ -104,7 +104,7 @@ bool valid_tokens(std::vector<std::string> tokens) {
 return true;
 }
 
-bool valid_function_usage(std::vector<std::string> tokens, int& i) {
+bool valid_function_usage(const std::vector<std::string> &tokens, int& i) {
     int expected_args = tokens[i] == "abs" ? 1 : 2;
 
     if (i + 1 >= tokens.size() || tokens[i + 1] != "(") return false;
@@ -147,12 +147,12 @@ bool valid_function_usage(std::vector<std::string> tokens, int& i) {
     return false;
 }
 
-void process_tokens(std::vector<std::string> tokens) {
+void process_tokens(const std::vector<std::string> &tokens) {
     std::vector<std::string> rpn_tokens = convert_rpn(tokens);
     calculate_pn(rpn_tokens);
 }
 
-void calculate_pn(std::vector<std::string> tokens) {
+void calculate_pn(const std::vector<std::string> &tokens) {
     std::stack<float> result_stack;
 
     for (auto& token : tokens) {
@@ -189,7 +189,7 @@ float apply_operator(float a, const std::string& operation, float b) {
 }
 
 
-std::vector<std::string> convert_rpn(std::vector<std::string> tokens) {
+std::vector<std::string> convert_rpn(const std::vector<std::string> &tokens) {
     std::stack<std::string> operator_stack;
     std::queue<std::string> output_queue;
 
@@ -197,7 +197,12 @@ std::vector<std::string> convert_rpn(std::vector<std::string> tokens) {
         if (is_number(token)) {
             output_queue.push(token);
         }
-        else if (token == ",") continue;
+        else if (token == ",") {
+            while (!operator_stack.empty() && operator_stack.top() != "(") {
+                output_queue.push(operator_stack.top());
+                operator_stack.pop();
+            }
+        }
         else if (token == "(") operator_stack.push(token);
         else if (token == ")") {
             while (!operator_stack.empty() && operator_stack.top() != "(") {
