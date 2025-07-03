@@ -26,6 +26,7 @@ int main() {
     while (true) {
         std::string input;
         std::getline(std::cin, input);
+        input.erase(std::remove_if(input.begin(), input.end(), isspace), input.end());
 
         std::vector<std::string> tokens;
         std::vector<char> buffer;
@@ -35,6 +36,7 @@ int main() {
             std::cout << "Your input was incorrect. Please, try again" << std::endl;
             input.clear(); tokens.clear(); buffer.clear();
             std::getline(std::cin, input);
+            input.erase(std::remove_if(input.begin(), input.end(), isspace), input.end());
             parse_tokens(input, tokens, buffer);
         }
 
@@ -50,7 +52,7 @@ bool is_number(const std::string& token) {
 
 void parse_tokens(std::string& input, std::vector<std::string>& tokens, std::vector<char>& buffer) {
     for (int i = 0; i < input.length(); i++) {
-        if (isdigit(input[i]) || (input[i] == '-' && (i == 0 || input[i - 1] == '(' || input[i - 1] == ',')))
+        if (isdigit(input[i]) || (input[i] == '-' && (i == 0 || input[i - 1] == ',' || input[i - 1] == '(')))
             buffer.push_back(input[i]);
         else if (std::find(operators.begin(), operators.end(),std::string(1, input[i])) != operators.end()) {
             if (!buffer.empty()) {
@@ -136,6 +138,7 @@ bool valid_function_usage(std::vector<std::string> tokens, int& i) {
             if (arg_count >= expected_args) return false;
             i++;
         } else {
+
             arg.push_back(tokens[i]);
             i++;
         }
